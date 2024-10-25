@@ -10,10 +10,14 @@ import {
   usePositionsInfoData,
   useTokensData,
 } from "context/SyntheticsStateContext/hooks/globalsHooks";
-import { selectChartToken } from "context/SyntheticsStateContext/selectors/chartSelectors";
+import { selectChartHeaderInfo, selectChartToken } from "context/SyntheticsStateContext/selectors/chartSelectors";
 import { selectSelectedMarketPriceDecimals } from "context/SyntheticsStateContext/selectors/statsSelectors";
-import { selectTradeboxSetToTokenAddress } from "context/SyntheticsStateContext/selectors/tradeboxSelectors";
-import { useSelector } from "context/SyntheticsStateContext/utils";
+import {
+  selectTradeboxMarketInfo,
+  selectTradeboxMarkPrice,
+  selectTradeboxSetToTokenAddress,
+} from "context/SyntheticsStateContext/selectors/tradeboxSelectors";
+import { createSelector, useSelector } from "context/SyntheticsStateContext/utils";
 
 import { isIncreaseOrderType, isSwapOrderType, PositionOrderInfo } from "domain/synthetics/orders";
 import { getTokenData } from "domain/synthetics/tokens";
@@ -25,7 +29,7 @@ import { USD_DECIMALS } from "config/factors";
 import { useChainId } from "lib/chains";
 import { CHART_PERIODS } from "lib/legacy";
 import { useLocalStorageSerializeKey } from "lib/localStorage";
-import { formatAmount } from "lib/numbers";
+import { formatAmount, PRECISION } from "lib/numbers";
 
 import { TVChartHeader } from "./TVChartHeader";
 
@@ -34,12 +38,56 @@ import useTVDatafeed from "domain/tradingview/useTVDatafeed";
 import { getRequestId, LoadingFailedEvent, LoadingStartEvent, LoadingSuccessEvent, metrics } from "lib/metrics";
 import { prepareErrorMetricData } from "lib/metrics/errorReporting";
 import "./TVChart.scss";
+import Tab from "components/Tab/Tab";
+
+import AntennaBarsIcon from "img/ic_antenna_bars.svg?react";
+import CandlestickChartIcon from "img/ic_candlestick_chart.svg?react";
+import { DepthChart } from "./DepthChart";
 
 const DEFAULT_PERIOD = "5m";
 let metricsRequestId: string | undefined = undefined;
 let metricsIsFirstLoadTime = true;
 
-export function TVChart() {
+export function Chart() {
+  const isMobile = useMedia("(max-width: 700px)");
+
+  const [tab, setTab] = useState("PRICE");
+
+  return (
+    <div className="ExchangeChart tv">
+      <TVChartHeader isMobile={isMobile} />
+
+      <div className="flex h-[49.6rem] flex-col overflow-hidden rounded-4 bg-slate-800 text-15">
+        <div className="px-20 py-10">
+          <Tab
+            type="inline"
+            options={["PRICE", "DEPTH"]}
+            option={tab}
+            optionLabels={{
+              PRICE: (
+                <div className="flex items-center gap-8">
+                  <AntennaBarsIcon />
+                  PRICE
+                </div>
+              ),
+              DEPTH: (
+                <div className="flex items-center gap-8">
+                  <CandlestickChartIcon />
+                  DEPTH
+                </div>
+              ),
+            }}
+            onChange={setTab}
+          />
+        </div>
+
+        {tab === "PRICE" ? <TVChart /> : <DepthChartContainer />}
+      </div>
+    </div>
+  );
+}
+
+function TVChart() {
   const { chartToken, symbol } = useSelector(selectChartToken);
   const ordersInfo = useOrdersInfoData();
   const tokensData = useTokensData();
@@ -239,28 +287,122 @@ export function TVChart() {
     [chartToken]
   );
 
-  const isMobile = useMedia("(max-width: 700px)");
+  if (!symbol) {
+    return null;
+  }
 
   return (
-    <div className="ExchangeChart tv">
-      <TVChartHeader isMobile={isMobile} />
-      <div className="ExchangeChart-bottom App-box App-box-border">
-        {symbol && (
-          <TVChartContainer
-            chartLines={chartLines}
-            symbol={symbol}
-            chainId={chainId}
-            onSelectToken={onSelectChartToken}
-            dataProvider={dataProvider}
-            datafeed={datafeed}
-            period={period}
-            setPeriod={setPeriod}
-            chartToken={chartTokenProp}
-            supportedResolutions={SUPPORTED_RESOLUTIONS_V2}
-            oraclePriceDecimals={oraclePriceDecimals}
-          />
-        )}
-      </div>
+    <div className="relative grow">
+      <TVChartContainer
+        chartLines={chartLines}
+        symbol={symbol}
+        chainId={chainId}
+        onSelectToken={onSelectChartToken}
+        dataProvider={dataProvider}
+        datafeed={datafeed}
+        period={period}
+        setPeriod={setPeriod}
+        chartToken={chartTokenProp}
+        supportedResolutions={SUPPORTED_RESOLUTIONS_V2}
+        oraclePriceDecimals={oraclePriceDecimals}
+      />
     </div>
   );
+}
+
+// const info = useSelector(selectChartHeaderInfo);
+
+const selectLongOpenInterest = createSelector((q) => {
+  const info = q(selectChartHeaderInfo);
+
+  if (!info) {
+    return undefined;
+  }
+
+  return info.openInterestLong;
+});
+
+const selectShortOpenInterest = createSelector((q) => {
+  const info = q(selectChartHeaderInfo);
+
+  if (!info) {
+    return undefined;
+  }
+
+  return info.openInterestShort;
+});
+
+const selectImpactExponent = createSelector((q) => {
+  const info = q(selectTradeboxMarketInfo);
+
+  if (!info) {
+    return undefined;
+  }
+
+  return info.positionImpactExponentFactor;
+});
+
+const selectPositiveImpactFactor = createSelector((q) => {
+  const info = q(selectTradeboxMarketInfo);
+
+  if (!info) {
+    return undefined;
+  }
+
+  return info.positionImpactFactorPositive;
+});
+
+const selectNegativeImpactFactor = createSelector((q) => {
+  const info = q(selectTradeboxMarketInfo);
+
+  if (!info) {
+    return undefined;
+  }
+
+  return info.positionImpactFactorNegative;
+});
+
+const selectMinPrice = createSelector((q) => {
+  const info = q(selectChartToken);
+
+  if (!info.chartToken) {
+    return undefined;
+  }
+
+  return info.chartToken.prices.minPrice;
+});
+
+const selectMarketPrice = createSelector((q) => {
+  const info = q(selectTradeboxMarkPrice);
+
+  return info;
+});
+
+const selectMaxPrice = createSelector((q) => {
+  const info = q(selectChartToken);
+
+  if (!info.chartToken) {
+    return undefined;
+  }
+
+  return info.chartToken.prices.maxPrice;
+});
+
+function DepthChartContainer() {
+  // const longOpenInterest = useSelector(selectLongOpenInterest);
+  // const shortOpenInterest = useSelector(selectShortOpenInterest);
+  // const impactExponent = useSelector(selectImpactExponent);
+  // const positiveImpactFactor = useSelector(selectPositiveImpactFactor);
+  // const negativeImpactFactor = useSelector(selectNegativeImpactFactor);
+  // const minPrice = useSelector(selectMinPrice);
+  // const marketPrice = useSelector(selectMarketPrice);
+  // const maxPrice = useSelector(selectMaxPrice);
+
+  const marketInfo = useSelector(selectTradeboxMarketInfo);
+
+  if (!marketInfo) {
+    return null;
+  }
+
+  return <DepthChart marketInfo={marketInfo} />;
 }
