@@ -196,6 +196,10 @@ msgstr "GMX transfers not yet enabled"
 msgid "EIP-4844, 13-20 Mar"
 msgstr "EIP-4844, 13-20 Mar"
 
+#: src/components/Synthetics/TVChart/DepthChart.tsx
+msgid "Total size"
+msgstr "Total size"
+
 #: src/components/Exchange/PositionSeller.jsx
 #: src/components/Exchange/SwapBox.jsx
 msgid "Enable leverage sent."
@@ -3949,6 +3953,7 @@ msgstr "Users"
 #: src/components/Synthetics/TradeHistory/TradeHistoryRow/utils/position.ts
 #: src/components/Synthetics/TradeHistory/TradeHistoryRow/utils/position.ts
 #: src/components/Synthetics/TradeHistory/useDownloadAsCsv.tsx
+#: src/components/Synthetics/TVChart/DepthChart.tsx
 msgid "Price Impact"
 msgstr "Price Impact"
 
@@ -7425,6 +7430,7 @@ msgstr "Last 30 days"
 
 #: src/components/Synthetics/ExecutionPriceRow.tsx
 #: src/components/Synthetics/TradeHistory/useDownloadAsCsv.tsx
+#: src/components/Synthetics/TVChart/DepthChart.tsx
 msgid "Execution Price"
 msgstr "Execution Price"
 
