@@ -36,7 +36,7 @@ export function useMaxAutoCancelOrdersState({ positionKey }: { positionKey?: str
     };
   }
 
-  const allowedAutoCancelOrdersNumber = Number(maxAutoCancelOrders) - 1;
+  const allowedAutoCancelOrdersNumber = Number(maxAutoCancelOrders);
   const autoCancelOrdersLimit = allowedAutoCancelOrdersNumber - existingAutoCancelOrders.length;
   const showWarning = autoCancelOrdersLimit < draftOrdersCount;
 
